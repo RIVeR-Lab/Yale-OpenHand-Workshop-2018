@@ -1,0 +1,14 @@
+servo_ids: [0,1,2,3]
+servo_type: 'RX'
+servo_port: '/dev/ttyUSB0'
+openhand_type: 'Model_O'
+direction: [1,1,1,1]
+poses:
+  open:
+    positions: [0, 0, 0, 0]
+  power_sphere:
+    positions: [0.5, 0.5, 0.5, 0.5]
+  power_cylinder:
+    positions: [0.5, 0.5, 0.5, 0.5]
+  pinch:
+    positions: [0.5, 0.5, 0.5, 0.5]

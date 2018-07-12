@@ -19,6 +19,7 @@ add_service_files(
    ReadCurrent.srv
    ReadTemperature.srv
    ReadLoad.srv
+   PoseHand.srv
 )
 
 ## Generate added messages and services with any dependencies listed here

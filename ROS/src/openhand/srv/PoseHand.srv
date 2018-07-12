@@ -1,0 +1,4 @@
+float32[] positions
+string pose_name
+---
+int32 err
