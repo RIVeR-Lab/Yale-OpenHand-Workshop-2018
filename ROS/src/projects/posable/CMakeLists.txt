@@ -11,10 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   cmake_modules
 )
 
-catkin_package(
-  INCLUDE_DIRS include
-  DEPENDS common_msgs_gl
-)
+catkin_package()
 
 include_directories(
   include

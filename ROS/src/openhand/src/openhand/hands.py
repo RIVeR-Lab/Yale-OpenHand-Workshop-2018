@@ -13,14 +13,14 @@ class OpenHand():
 	port = None		#mounted port, /devttyUSB# in Linux, COM# in Windows
 	servo_ids = []
 	servos = []
-	
+
 	servo_speed = 1.0
 	max_torque = 1.0	#Dynamixel suggests capping max torque at 0.4 of stall torque
 
 	motorDir = []
 	motorMin = []
 	motorMax = []
-	
+
 	amnt_release = 0.0	#values [0,1.0] for degree of closing and opening
 	amnt_close = 0.5
 
@@ -50,7 +50,7 @@ class OpenHand():
 			self.servos.append(Robotis_Servo(self.dyn,servo_id,series))
 			if DEBUG > 0:
 				print ("Initialized servo number %d" % servo_id)
-			
+
 		if DEBUG > 0:
 			print ("Initialized all servos")
 		for servo in self.servos:
@@ -70,7 +70,7 @@ class OpenHand():
 			self.motorMax = [self.amnt_close]*num_servos
 		self.reset()
 		print "Initialization Complete."
-		
+
 	def reset(self):	#returns everything to zeroed positions, different from release
 		print "[ERR] reset() not implemented"
 		return False
@@ -79,7 +79,7 @@ class OpenHand():
 		print "[ERR] release() not implemented\n"
 		return False
 
-	#close functions are normalized regardless of mode such that the operating range [0,1.0] makes sense 
+	#close functions are normalized regardless of mode such that the operating range [0,1.0] makes sense
 	def close(self,amnt=0.5):
 		print "[ERR] close() not implemented\n"
 		return False
@@ -98,7 +98,7 @@ class OpenHand():
 				servo.move_to_encoder(int(servo.settings["max_encoder"]*(self.motorMin[index] + amnt*(self.motorMax[index]-self.motorMin[index]))))
 			else:				#reverse
 				servo.move_to_encoder(int(servo.settings["max_encoder"]*(self.motorMax[index] - amnt*(self.motorMax[index]-self.motorMin[index]))))
-	
+
 	def moveHand(self,vals):
 		if len(vals)!=len(self.servos):
 			print "[ERR] Motor number mismatch"
@@ -113,7 +113,7 @@ class OpenHand():
 		if self.motorDir[index]>0:
 			val = (enc/float(servo.settings["max_encoder"])-self.motorMin[index]) / (self.motorMax[index]-self.motorMin[index])
 		else:
-			val = (self.motorMax[index]-enc/float(servo.settings["max_encoder"])) / (self.motorMax[index]-self.motorMin[index])	
+			val = (self.motorMax[index]-enc/float(servo.settings["max_encoder"])) / (self.motorMax[index]-self.motorMin[index])
 		return val,enc
 
 	def readHand(self):
@@ -128,12 +128,20 @@ class OpenHand():
 		return amnts, encs
 
 	#takes the current location and sets either the min or max
-	def setMotorMin(self):
+	def setMotorsMinToCurPos(self):
 		amnts,encs = self.readHand()
 		self.motorMin = (encs/float(self.servos[0].settings['max_encoder'])).tolist()
-	def setMotorMax(self):
+	def setMotorsMaxToCurPos(self):
 		amnts,encs = self.readHand()
 		self.motorMax = (encs/float(self.servos[0].settings['max_encoder'])).tolist()
+
+
+	#allows the user to set the minimun and maximum for each motor
+	def setMotorMin(self, index, minimum):
+		self.motorMin[index] = minimum
+
+	def setMotorMax(self, index, maximum):
+		self.motorMax[index] = minimum
 
 	#setting the max torque (shortcut for torque-based closing motions)
 	def setMaxTorque(self,val=1.0):
@@ -170,7 +178,7 @@ class GripperPP(OpenHand):
 	motorDir = [1,1]
 	motorMin = [0.05,0.05]	#should always be symmetric here?
 	motorMax = [0.7,0.7]
-	
+
 	modes = [True,True]
 
 	HOLD_TORQUE = 0.2
@@ -198,7 +206,7 @@ class GripperPP(OpenHand):
 		if pos_val is None:
 			enc = int(s.read_encoder()+self.OVERSHOOT * s.settings['max_encoder'])
 		else:
-			pos_val = min(max(0,pos_val),1.0) 
+			pos_val = min(max(0,pos_val),1.0)
 			enc = int((pos_val * (self.motorMax[index]-self.motorMin[index])+self.motorMin[index]) * s.settings['max_encoder'])
 
 		s.apply_max_torque(val)
@@ -295,8 +303,8 @@ class Model_O(OpenHand):
 	amnt_close = 0.5
 
 	motorDir = [1,1,-1,1]
-	motorMin = [0.05,0.05,0.3,0.05]
-	motorMax = [0.5,0.7,0.95,0.7]
+	motorMin = [0.0,0.03,0.55,0.03]
+	motorMax = [0.5,0.45,1,0.5]
 
 	HAND_HEIGHT = 0.14
 	WRIST_OFFSET = -np.pi/4
@@ -310,7 +318,7 @@ class Model_O(OpenHand):
 
 
 	def reset(self):
-		self.moveMotor(0,0.5)
+		self.moveMotor(0,0.)
 		self.release()
 
 	def release(self):
@@ -331,17 +339,17 @@ class Model_O(OpenHand):
 			print "[WARNING] Fingers may be spread too far apart for closing motion"
 
 		amnt_goal = np.array([amnt,amnt,amnt,s_amnt])
-		da_arr = np.array([da,-da,0.,0.])	
+		da_arr = np.array([da,-da,0.,0.])
 		for i in xrange(nsteps):
 			amnt_arr = amnt_start+(amnt_goal-amnt_curr)*float(i)/nsteps+da_arr*(-1)**i
 
 			self.moveHand(amnt_arr)
-			time.sleep(pause)	
+			time.sleep(pause)
 		self.moveHand(amnt_goal)
 
 class Model_Q(OpenHand):
 	servo_speed = 0.25
-	
+
 	amnt_close = 0.35
 
 	motorDir = [1,-1,1,1]
@@ -441,8 +449,8 @@ class Model_T42(OpenHand):
 	servo_speed = 0.25
 
 	motorDir = [1,-1]
-	motorMin = [0.05,0.05]
-	motorMax = [1.,1.]
+	motorMin = [0.54,0.2]
+	motorMax = [1.2,0.78]
 
 	HAND_HEIGHT = 0.08
 	WRIST_OFFSET = -5*np.pi/12
@@ -464,7 +472,7 @@ class Model_T42(OpenHand):
 		if pos_val is None:
 			enc = int(s.read_encoder()+self.OVERSHOOT * s.settings['max_encoder'])
 		else:
-			pos_val = min(max(0,pos_val),1.0) 
+			pos_val = min(max(0,pos_val),1.0)
 			enc = int((pos_val * (self.motorMax[index]-self.motorMin[index])+self.motorMin[index]) * s.settings['max_encoder'])
 		s.enable_torque_mode()
 		s.apply_torque(10000)
@@ -474,7 +482,7 @@ class Model_T42(OpenHand):
 
 
 
-#		self.moveMotor(1,val[1])	
+#		self.moveMotor(1,val[1])
 #		time.sleep(0.3*2)
 
 #		val = min(1.0,max(val,0))	#by design, can exceed default max torque value
@@ -483,7 +491,7 @@ class Model_T42(OpenHand):
 #		if pos_val is None:
 #			enc = int(s.read_encoder()+self.OVERSHOOT * s.settings['max_encoder'])
 #		else:
-#			pos_val = min(max(0,pos_val),1.0) 
+#			pos_val = min(max(0,pos_val),1.0)
 #			enc = int((pos_val * (self.motorMax[index]-self.motorMin[index])+self.motorMin[index]) * s.settings['max_encoder'])
 #
 #		s.apply_max_torque(val)
@@ -505,7 +513,7 @@ class Model_T42(OpenHand):
 	def flip_close(self):
 		self.moveMotor(0,self.amnt_close)
 		self.moveMotor(1,self.amnt_close)
-		
+
 
 class Model_T(OpenHand):
 	max_torque = 0.4
@@ -539,7 +547,7 @@ class Model_T(OpenHand):
 		self.servos[0].disable_torque_mode()
 		self.preventLoadError(0)
 		return True
-	
+
 	def close_wheel(self,amnt=0.5,speed=0.2):	#closing through wheel mode
 		#set torque output to max, use wheel speed to modulate closing force
 		self.servos[0].disable_torque_mode()
@@ -564,10 +572,10 @@ class Model_T(OpenHand):
 		time.sleep(self.pause)
 		self.servos[0].move_to_encoder(self.servos[0].settings['max_encoder']-1)
 		time.sleep(self.pause)
-	
+
 		i,sp = 0,1.
-		while i<self.limit_close and sp>0:	
-			sp = self.servos[0].read_speed()	
+		while i<self.limit_close and sp>0:
+			sp = self.servos[0].read_speed()
 			print "close (speed): "+repr(sp)
 			i += 1
 			time.sleep(self.pause)
@@ -586,7 +594,7 @@ class Model_T(OpenHand):
 
 		self.servos[0].kill_cont_turn()			#back to position mode
 		self.servos[0].apply_speed(self.servo_speed)	#check in case it was in wheel mode
-		self.moveMotor(0,self.amnt_release)	
+		self.moveMotor(0,self.amnt_release)
 class Model_s(OpenHand):
 	max_torque = 0.4
 	limit_close = 10		#counter for a standard close (to prevent servo stuck in closing mode in event of tendon failure)
@@ -616,7 +624,7 @@ class Model_s(OpenHand):
 #		if pos_val is None:
 #			enc = int(s.read_encoder()+self.OVERSHOOT * s.settings['max_encoder'])
 #		else:
-#			pos_val = min(max(0,pos_val),1.0) 
+#			pos_val = min(max(0,pos_val),1.0)
 #			enc = int((pos_val * (self.motorMax[index]-self.motorMin[index])+self.motorMin[index]) * s.settings['max_encoder'])
 #
 #		s.apply_max_torque(val)
@@ -637,7 +645,7 @@ class Model_s(OpenHand):
 		self.servos[0].disable_torque_mode()
 		self.preventLoadError(0)
 		return True
-	
+
 	def close_wheel(self,amnt=0.5,speed=0.2):	#closing through wheel mode
 		#set torque output to max, use wheel speed to modulate closing force
 		self.servos[0].disable_torque_mode()
@@ -662,10 +670,10 @@ class Model_s(OpenHand):
 		time.sleep(self.pause)
 		self.servos[0].move_to_encoder(self.servos[0].settings['max_encoder']-1)
 		time.sleep(self.pause)
-	
+
 		i,sp = 0,1.
-		while i<self.limit_close and sp>0:	
-			sp = self.servos[0].read_speed()	
+		while i<self.limit_close and sp>0:
+			sp = self.servos[0].read_speed()
 			print "close (speed): "+repr(sp)
 			i += 1
 			time.sleep(self.pause)
@@ -684,4 +692,4 @@ class Model_s(OpenHand):
 
 		self.servos[0].kill_cont_turn()			#back to position mode
 		self.servos[0].apply_speed(self.servo_speed)	#check in case it was in wheel mode
-		self.moveMotor(0,self.amnt_release)	
+		self.moveMotor(0,self.amnt_release)

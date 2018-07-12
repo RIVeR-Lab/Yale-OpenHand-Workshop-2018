@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 
 from openhand import *
 from openhand.srv import *
@@ -14,7 +14,7 @@ class OpenHandNode():
 		self.sRefs = [0.]*len(self.hand.servos)
 		for i in xrange(len(self.hand.servos)):
 			sp,se = self.hand.readMotor(i)
-			self.sRefs[i] = sp	
+			self.sRefs[i] = sp
 
 		#initialize service handlers:
 		rospy.Service('MoveServos',MoveServos,self.MoveServosProxy)
@@ -34,10 +34,10 @@ class OpenHandNode():
 
 	def PoseHandProxy(self, req):
 		if rospy.has_param("~poses"):
-			Poses = rospy.get_param("~poses")\
+			hand_poses = rospy.get_param("~poses")\
 
-		pose = Poses[req.pose_name]
-		positions = Pose["positions"]
+		hand_pose = hand_poses[req.pose_name]
+		positions = hand_pose["positions"]
 
 		resp = PoseHandResponse()
 		resp.err = 0
@@ -50,7 +50,7 @@ class OpenHandNode():
 					self.hand.moveMotor(i,positions[i])
 				else:
 					self.hand.moveMotor(i,1-positions[i])
-				self.sRefs[i] = pos[i]	#store the reference value sent through ROS
+				self.sRefs[i] = positions[i]	#store the reference value sent through ROS
 			else:
 				resp.err = 1
 
@@ -95,14 +95,14 @@ class OpenHandNode():
 #				resp.err = 1
 		return resp
 
-	def ReadServosProxy(self,req):	
+	def ReadServosProxy(self,req):
 		pos = [0.]*len(self.hand.servos)
 		ref = self.sRefs
-		enc = [0]*len(self.hand.servos)	
+		enc = [0]*len(self.hand.servos)
 		for i in xrange(len(self.hand.servos)):
 			sp,se = self.hand.readMotor(i)
 			pos[i] = sp
-			enc[i] = se	
+			enc[i] = se
 		resp = ReadServosResponse()
 		resp.pos = pos
 		resp.enc = enc
@@ -192,9 +192,9 @@ if __name__=="__main__":
 			except:
 				rospy.logerr("ERR: Model Twiddler failed to initialize (openhandNode.py)")
 				Hand = None
-	
+
 	#start node
 	if Hand is None:
-		rospy.logerr("ERR: Cannot Initialize the openhand node, since the hand cannot be initialized (openhandNode.py)")	
+		rospy.logerr("ERR: Cannot Initialize the openhand node, since the hand cannot be initialized (openhandNode.py)")
 	else:
 		OpenHandNode(Hand)
